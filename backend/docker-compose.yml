@@ -1,12 +1,13 @@
 services:
   db:
     image: postgis/postgis:16-3.4-alpine
+    platform: linux/amd64
     environment:
       POSTGRES_USER: washbook
       POSTGRES_PASSWORD: secret
       POSTGRES_DB: washbook
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
