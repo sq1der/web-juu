@@ -42,7 +42,13 @@ export default function ToastContainer() {
           className={`flex items-start gap-3 p-4 rounded-xl border shadow-lg animate-slide-up ${styles[t.type] || styles.info}`}
         >
           <span className="shrink-0 mt-0.5">{icons[t.type]}</span>
-          <p className="text-sm font-medium flex-1">{t.message}</p>
+          <p className="text-sm font-medium flex-1">
+            {typeof t.message === 'object' 
+              ? (Array.isArray(t.message) 
+              ? t.message.map(m => m.msg || JSON.stringify(m)).join(', ') 
+              : (t.message.detail || JSON.stringify(t.message)))
+                : t.message}
+          </p>
           <button onClick={() => removeToast(t.id)} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
