@@ -18,6 +18,55 @@ from app.ws.manager import manager
 router = APIRouter(prefix="/operator", tags=["operator"])
 
 
+@router.get("/stats")
+async def get_stats(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("owner")),
+):
+    cw = await get_owner_carwash(user, db)
+    cw_id = str(cw.id)
+
+    # Bookings by status
+    by_status = await db.execute(text("""
+        SELECT b.status, COUNT(*) AS cnt
+        FROM bookings b
+        JOIN slots s ON s.id = b.slot_id
+        WHERE s.carwash_id = :cw_id
+        GROUP BY b.status
+    """), {"cw_id": cw_id})
+    status_counts = {row.status: row.cnt for row in by_status}
+
+    # Bookings by hour of day (confirmed + pending)
+    by_hour = await db.execute(text("""
+        SELECT EXTRACT(HOUR FROM s.starts_at AT TIME ZONE 'UTC') AS hour, COUNT(*) AS cnt
+        FROM bookings b
+        JOIN slots s ON s.id = b.slot_id
+        WHERE s.carwash_id = :cw_id AND b.status != 'cancelled'
+        GROUP BY hour
+        ORDER BY hour
+    """), {"cw_id": cw_id})
+    hourly = [{"hour": int(row.hour), "bookings": row.cnt} for row in by_hour]
+
+    # Revenue estimate from confirmed bookings
+    revenue = await db.execute(text("""
+        SELECT COALESCE(SUM(sv.price), 0) AS total
+        FROM bookings b
+        JOIN slots s ON s.id = b.slot_id
+        JOIN services sv ON sv.id = b.service_id
+        WHERE s.carwash_id = :cw_id AND b.status = 'confirmed'
+    """), {"cw_id": cw_id})
+    total_revenue = revenue.scalar()
+
+    return {
+        "bookings_by_status": status_counts,
+        "bookings_by_hour": hourly,
+        "revenue_confirmed": total_revenue,
+        "rating": cw.rating,
+        "reviews_count": cw.reviews_count,
+    }
+
+
+
 class CarwashUpdate(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
