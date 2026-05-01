@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from typing import Optional
-from datetime import date
+from datetime import date, datetime, timezone
 import uuid
 
 from app.database import get_db
@@ -86,11 +86,13 @@ async def get_slots(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    day_start = datetime(date_filter.year, date_filter.month, date_filter.day, 0, 0, 0, tzinfo=timezone.utc)
+    day_end   = datetime(date_filter.year, date_filter.month, date_filter.day, 23, 59, 59, tzinfo=timezone.utc)
     result = await db.execute(
         select(Slot).where(
             Slot.carwash_id == carwash_id,
-            Slot.starts_at >= f"{date_filter} 00:00:00+00",
-            Slot.starts_at <= f"{date_filter} 23:59:59+00",
+            Slot.starts_at >= day_start,
+            Slot.starts_at <= day_end,
             Slot.booked < Slot.capacity,
         ).order_by(Slot.starts_at)
     )

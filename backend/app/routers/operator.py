@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date as date_type
 import uuid
 
 from app.database import get_db
@@ -267,9 +267,12 @@ async def list_slots(
     cw = await get_owner_carwash(user, db)
     q = select(Slot).where(Slot.carwash_id == cw.id)
     if date_filter:
+        parsed = date_type.fromisoformat(date_filter)
+        day_start = datetime(parsed.year, parsed.month, parsed.day, 0, 0, 0, tzinfo=timezone.utc)
+        day_end   = datetime(parsed.year, parsed.month, parsed.day, 23, 59, 59, tzinfo=timezone.utc)
         q = q.where(
-            Slot.starts_at >= f"{date_filter} 00:00:00+00",
-            Slot.starts_at <= f"{date_filter} 23:59:59+00",
+            Slot.starts_at >= day_start,
+            Slot.starts_at <= day_end,
         )
     result = await db.execute(q.order_by(Slot.starts_at))
     slots = result.scalars().all()
