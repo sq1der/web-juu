@@ -37,7 +37,11 @@ export const operatorService = {
     return data
   },
   async createSlot(payload) {
-    const { data } = await api.post('/operator/slots', payload)
+    const formattedPayload = {
+      slots: [payload]
+    };
+
+    const { data } = await api.post('/operator/slots', formattedPayload)
     return data
   },
   async updateSlot(id, payload) {
